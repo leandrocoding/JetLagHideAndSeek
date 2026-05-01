@@ -71,6 +71,28 @@ import { UnitSelect } from "./UnitSelect";
 const HIDING_ZONE_URL_PARAM = "hz";
 const HIDING_ZONE_COMPRESSED_URL_PARAM = "hzc";
 const PASTEBIN_URL_PARAM = "pb";
+const HIDING_ZONE_REMOTE_URL_PARAM = "hzu";
+
+const getRawUrlParam = (url: URL, param: string): string | null => {
+    const query = url.search.startsWith("?")
+        ? url.search.substring(1)
+        : url.search;
+    const prefix = `${param}=`;
+    const start = query.startsWith(prefix) ? 0 : query.indexOf(`&${prefix}`);
+
+    if (start === -1) return null;
+
+    const valueStart = start === 0 ? prefix.length : start + prefix.length + 1;
+    const rawValue = query.substring(valueStart);
+
+    if (!rawValue) return null;
+
+    try {
+        return decodeURIComponent(rawValue);
+    } catch {
+        return rawValue;
+    }
+};
 
 export const OptionDrawers = ({ className }: { className?: string }) => {
     useStore(triggerLocalRefresh);
@@ -109,14 +131,39 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
     }, [$defaultUnit]);
 
     useEffect(() => {
-        const params = new URL(window.location.toString()).searchParams;
+        const url = new URL(window.location.toString());
+        const params = url.searchParams;
         const hidingZoneOld = params.get(HIDING_ZONE_URL_PARAM);
         const hidingZoneCompressed = params.get(
             HIDING_ZONE_COMPRESSED_URL_PARAM,
         );
         const pastebinId = params.get(PASTEBIN_URL_PARAM);
+        const remoteUrl = getRawUrlParam(url, HIDING_ZONE_REMOTE_URL_PARAM);
 
-        if (hidingZoneOld !== null) {
+        if (remoteUrl !== null) {
+            fetch(remoteUrl)
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(
+                            `${response.status} ${response.statusText}`,
+                        );
+                    }
+                    return response.text();
+                })
+                .then((data) => {
+                    loadHidingZone(data);
+                    window.history.replaceState(
+                        {},
+                        "",
+                        window.location.pathname,
+                    );
+                    toast.success("Successfully loaded data from URL!");
+                })
+                .catch((error) => {
+                    console.error("Failed to fetch hiding zone URL:", error);
+                    toast.error(`Failed to load from URL: ${error.message}`);
+                });
+        } else if (hidingZoneOld !== null) {
             // Legacy base64 encoding
             try {
                 loadHidingZone(atob(hidingZoneOld));
