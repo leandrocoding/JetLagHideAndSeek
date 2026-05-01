@@ -235,6 +235,8 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
                     additionalMapGeoLocations.set([]);
                 }
             } else {
+                additionalMapGeoLocations.set([]);
+
                 if (geojson.questions) {
                     questions.set(questionsSchema.parse(geojson.questions));
                     delete geojson.questions;
@@ -250,7 +252,7 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
 
             const incomingPresets =
                 geojson.presets ?? geojson.properties?.presets;
-            if (incomingPresets && Array.isArray(incomingPresets)) {
+            if (Array.isArray(incomingPresets)) {
                 try {
                     const normalized = (incomingPresets as any[])
                         .filter((p) => p && p.data)
@@ -270,44 +272,56 @@ export const OptionDrawers = ({ className }: { className?: string }) => {
                                     p.createdAt ?? new Date().toISOString(),
                             };
                         });
+                    customPresets.set(normalized);
                     if (normalized.length > 0) {
-                        customPresets.set(normalized);
                         toast.info(`Imported ${normalized.length} preset(s)`);
                     }
                 } catch (err) {
                     console.warn("Failed to import presets", err);
+                    customPresets.set([]);
                 }
+            } else {
+                customPresets.set([]);
             }
 
-            if (
-                geojson.disabledStations !== null &&
-                geojson.disabledStations.constructor === Array
-            ) {
-                disabledStations.set(geojson.disabledStations);
-            }
+            disabledStations.set(
+                Array.isArray(geojson.disabledStations)
+                    ? geojson.disabledStations
+                    : [],
+            );
 
-            if (geojson.hidingRadius !== null) {
-                hidingRadius.set(geojson.hidingRadius);
-            }
+            hidingRadius.set(
+                typeof geojson.hidingRadius === "number"
+                    ? geojson.hidingRadius
+                    : 0.5,
+            );
+            hidingRadiusUnits.set(
+                geojson.hidingRadiusUnits ?? defaultUnit.get(),
+            );
 
-            if (geojson.zoneOptions) {
-                displayHidingZonesOptions.set(geojson.zoneOptions ?? []);
-            }
+            displayHidingZonesOptions.set(
+                Array.isArray(geojson.zoneOptions)
+                    ? geojson.zoneOptions
+                    : ["[railway=station]"],
+            );
 
-            if (typeof geojson.useCustomStations === "boolean") {
-                useCustomStations.set(geojson.useCustomStations);
-            }
+            useCustomStations.set(
+                typeof geojson.useCustomStations === "boolean"
+                    ? geojson.useCustomStations
+                    : false,
+            );
 
-            if (
-                geojson.customStations &&
-                geojson.customStations.constructor === Array
-            ) {
-                customStations.set(geojson.customStations);
-            }
+            customStations.set(
+                Array.isArray(geojson.customStations)
+                    ? geojson.customStations
+                    : [],
+            );
 
-            if (typeof geojson.includeDefaultStations === "boolean") {
-                includeDefaultStations.set(geojson.includeDefaultStations);
-            }
+            includeDefaultStations.set(
+                typeof geojson.includeDefaultStations === "boolean"
+                    ? geojson.includeDefaultStations
+                    : false,
+            );
 
             if (geojson.permanentOverlay) {
                 permanentOverlay.set(geojson.permanentOverlay);
